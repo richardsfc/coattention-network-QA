@@ -1,0 +1,6 @@
+# Ignore data
+data/
+# Ignore pycache
+src/*/__pycache__/*
+# Ignore train logs
+src/log/*
