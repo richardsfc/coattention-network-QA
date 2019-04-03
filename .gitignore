@@ -1,6 +1,8 @@
 # Ignore data
 data/
 # Ignore pycache
-src/*/__pycache__/*
+**/__pycache__/*
 # Ignore train logs
-src/log/*
+**/log/*
+# Ignore .DS_Store
+**/.DS_Store
