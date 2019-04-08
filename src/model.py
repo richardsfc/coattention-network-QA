@@ -7,7 +7,7 @@ from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 
 use_cuda = torch.cuda.is_available()
 
-#out-of-vocabulary words to zero
+# out-of-vocabulary words to zero
 def get_pretrained_embedding(np_embd):
     embedding = nn.Embedding(*np_embd.shape)
     embedding.weight = nn.Parameter(torch.from_numpy(np_embd).float())
@@ -33,12 +33,16 @@ class Encoder(nn.Module):
         self.embedding = get_pretrained_embedding(emb_matrix)
         self.emb_dim = self.embedding.embedding_dim
 
+        # AJ: Add option to switch modes (LSTM vs. GRU vs. Vanilla-RNN)
         self.encoder = nn.LSTM(self.emb_dim, hidden_dim, 1, batch_first=True,
                               bidirectional=False, dropout=dropout_ratio)
+
+        # Review: What is this for?
         init_lstm_forget_bias(self.encoder)
         self.dropout_emb = nn.Dropout(p=dropout_ratio)
         self.sentinel = nn.Parameter(torch.rand(hidden_dim,))
 
+    # Review: What does this do?
     def forward(self, seq, mask):
         lens = torch.sum(mask, 1)
         lens_sorted, lens_argsort = torch.sort(lens, 0, True)
@@ -53,6 +57,8 @@ class Encoder(nn.Module):
         e = torch.index_select(e, 0, lens_argsort_argsort)  # B x m x 2l
         e = self.dropout_emb(e)
 
+        # Review
+        # this part forward is NOT in baseline, what does part below do?
         b, _ = list(mask.size())
         # copy sentinel vector at the end
         sentinel_exp = self.sentinel.unsqueeze(0).expand(b, self.hidden_dim).unsqueeze(1).contiguous()  # B x 1 x l
@@ -66,6 +72,7 @@ class Encoder(nn.Module):
 
         return e
 
+# Review: What is fusion here? With CNN?
 class FusionBiLSTM(nn.Module):
     def __init__(self, hidden_dim, dropout_ratio):
         super(FusionBiLSTM, self).__init__()

@@ -86,7 +86,7 @@ def reporthook(t):
 
 
 def maybe_download(url, filename, prefix, num_bytes=None):
-    """Takes an URL, a filename, and the expected bytes, download
+    """Takes an URL, a filename, and the expected bytes, downloads
     the contents and returns the filename.
     num_bytes=None disables the file size check."""
     local_filename = None
@@ -108,8 +108,8 @@ def maybe_download(url, filename, prefix, num_bytes=None):
 
     return local_filename
 
-
-
+# Review
+# What purpose does this have?
 def get_char_word_loc_mapping(context, context_tokens):
     """
     Return a mapping that maps from character locations to the corresponding token locations.
@@ -145,7 +145,8 @@ def get_char_word_loc_mapping(context, context_tokens):
     else:
         return mapping
 
-
+# Review
+# Important: Tokenization issues, maybe can fix
 def preprocess_and_write(dataset, tier, out_dir):
     """Reads the dataset, extracts context, question, answer, tokenizes them,
     and calculates answer span in terms of token indices.
@@ -173,19 +174,24 @@ def preprocess_and_write(dataset, tier, out_dir):
         for pid in range(len(article_paragraphs)):
 
             context = article_paragraphs[pid]['context'] # string
+            qas = article_paragraphs[pid]['qas'] # list of questions
 
+            # Review
+            # Should be in tokenize function? Also, this is a change that is not in original paper.
             # The following replacements are suggested in the paper
             # BidAF (Seo et al., 2016)
             context = context.replace("''", '" ')
             context = context.replace("``", '" ')
 
-            context_tokens = tokenize(context) # list of strings (lowercase)
+            context_tokens = tokenize(context) # list of strings (will be lowercase)
             context = context.lower()
 
-            qas = article_paragraphs[pid]['qas'] # list of questions
-
+            # Review
+            # Will int as char location not overflow?
             charloc2wordloc = get_char_word_loc_mapping(context, context_tokens) # charloc2wordloc maps the character location (int) of a context token to a pair giving (word (string), word loc (int)) of that token
 
+            # Review
+            # How often does this happen?
             if charloc2wordloc is None: # there was a problem
                 num_mappingprob += len(qas)
                 continue # skip this context example
@@ -197,11 +203,15 @@ def preprocess_and_write(dataset, tier, out_dir):
                 question = qn['question'] # string
                 question_tokens = tokenize(question) # list of strings
 
+                # Review
+                # Why only first answer?
                 # of the three answers, just take the first
                 ans_text = qn['answers'][0]['text'].lower() # get the answer text
                 ans_start_charloc = qn['answers'][0]['answer_start'] # answer start loc (character count)
                 ans_end_charloc = ans_start_charloc + len(ans_text) # answer end loc (character count) (exclusive)
 
+                # Review
+                # Again, how often happen? And why even happen?
                 # Check that the provided character spans match the provided answer text
                 if context[ans_start_charloc:ans_end_charloc] != ans_text:
                   # Sometimes this is misaligned, mostly because "narrow builds" of Python 2 interpret certain Unicode characters to have length 2 https://stackoverflow.com/questions/29109944/python-returns-length-of-2-for-single-unicode-character-string
@@ -213,6 +223,9 @@ def preprocess_and_write(dataset, tier, out_dir):
                 ans_start_wordloc = charloc2wordloc[ans_start_charloc][1] # answer start word loc
                 ans_end_wordloc = charloc2wordloc[ans_end_charloc-1][1] # answer end word loc
                 assert ans_start_wordloc <= ans_end_wordloc
+
+                # Review
+                # Not other way to do this? Check magpie
 
                 # Check retrieved answer tokens match the provided answer text.
                 # Sometimes they won't match, e.g. if the context contains the phrase "fifth-generation"
@@ -237,6 +250,8 @@ def preprocess_and_write(dataset, tier, out_dir):
     indices = list(range(len(examples)))
     np.random.shuffle(indices)
 
+    # Review
+    # Where does span_file come from?
     with open(os.path.join(out_dir, tier +'.context'), 'w') as context_file,  \
          open(os.path.join(out_dir, tier +'.question'), 'w') as question_file,\
          open(os.path.join(out_dir, tier +'.answer'), 'w') as ans_text_file, \

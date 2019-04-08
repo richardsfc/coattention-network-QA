@@ -23,7 +23,11 @@ import os
 
 import numpy as np
 from data_util.data_batcher import padded, Batch
-from nltk.tokenize.moses import MosesDetokenizer
+
+# Review
+# Does not work
+# from nltk.tokenize.moses import MosesDetokenizer
+from mosestokenizer import MosesDetokenizer
 from six.moves import xrange
 from tqdm import tqdm
 from data_util.vocab import UNK_ID, PAD_ID

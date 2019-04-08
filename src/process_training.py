@@ -30,19 +30,23 @@ class Processor(object):
         self.glove_path = os.path.join(config.data_dir, "glove.6B.{}d.txt".format(config.embedding_size))
         self.emb_matrix, self.word2id, self.id2word = get_glove(self.glove_path, config.embedding_size)
 
-        self.train_context_path = os.path.join(config.data_dir, "train.context")
-        self.train_qn_path = os.path.join(config.data_dir, "train.question")
-        self.train_ans_path = os.path.join(config.data_dir, "train.span")
-        self.dev_context_path = os.path.join(config.data_dir, "dev.context")
-        self.dev_qn_path = os.path.join(config.data_dir, "dev.question")
-        self.dev_ans_path = os.path.join(config.data_dir, "dev.span")
+        self.train_context_path =   os.path.join(config.data_dir, "train.context")
+        self.train_qn_path =        os.path.join(config.data_dir, "train.question")
+        self.train_ans_path =       os.path.join(config.data_dir, "train.span")
+        self.dev_context_path =     os.path.join(config.data_dir, "dev.context")
+        self.dev_qn_path =          os.path.join(config.data_dir, "dev.question")
+        self.dev_ans_path =         os.path.join(config.data_dir, "dev.span")
 
+    # Review
+    # What is Mask?
+    # Sequence length is ...
     def get_mask_from_seq_len(self, seq_mask):
         seq_lens = np.sum(seq_mask, 1)
         max_len = np.max(seq_lens)
         indices = np.arange(0, max_len)
         mask = (indices < np.expand_dims(seq_lens, 1)).astype(int)
         return mask
+
 
     def get_data(self, batch, is_train=True):
         qn_mask = self.get_mask_from_seq_len(batch.qn_mask)

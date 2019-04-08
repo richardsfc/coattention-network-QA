@@ -1,0 +1,8 @@
+colorama
+nltk
+numpy
+six
+# tensorflow-gpu  # Un/comment if using GPU
+tensorflow      # Un/comment if using CPU-only
+tensorflow-tensorboard
+tqdm
