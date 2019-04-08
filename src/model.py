@@ -72,7 +72,6 @@ class Encoder(nn.Module):
 
         return e
 
-# Review: What is fusion here? With CNN?
 class FusionBiLSTM(nn.Module):
     def __init__(self, hidden_dim, dropout_ratio):
         super(FusionBiLSTM, self).__init__()

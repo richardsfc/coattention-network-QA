@@ -37,16 +37,12 @@ class Processor(object):
         self.dev_qn_path =          os.path.join(config.data_dir, "dev.question")
         self.dev_ans_path =         os.path.join(config.data_dir, "dev.span")
 
-    # Review
-    # What is Mask?
-    # Sequence length is ...
     def get_mask_from_seq_len(self, seq_mask):
         seq_lens = np.sum(seq_mask, 1)
         max_len = np.max(seq_lens)
         indices = np.arange(0, max_len)
         mask = (indices < np.expand_dims(seq_lens, 1)).astype(int)
         return mask
-
 
     def get_data(self, batch, is_train=True):
         qn_mask = self.get_mask_from_seq_len(batch.qn_mask)
