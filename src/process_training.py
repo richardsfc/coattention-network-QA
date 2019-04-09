@@ -115,7 +115,7 @@ class Processor(object):
             adaptive_load_state_dict(model, state['model'])
 
         return model
-
+        
     def get_grad_norm(self, parameters, norm_type=2):
         parameters = list(filter(lambda p: p.grad is not None, parameters))
         total_norm = 0
