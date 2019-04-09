@@ -112,7 +112,7 @@ class Processor(object):
 
         if model_file_path is not None:
             state = torch.load(model_file_path, map_location=lambda storage, location: storage)
-            adaptive_load_state_dict(state['model'])
+            adaptive_load_state_dict(model, state['model'])
 
         return model
 
