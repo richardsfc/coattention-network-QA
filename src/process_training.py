@@ -186,7 +186,7 @@ class Processor(object):
 
         model = self.get_model(model_file_path)
         params = list(filter(lambda p: p.requires_grad, model.parameters()))
-        optimizer = Adam(params, lr=config.lr, weight_decay=config.reg_lambda, amsgrad=True)
+        optimizer = Adam(params, lr=config.lr, amsgrad=True)
 
         num_params = sum(p.numel() for p in params)
         logging.info("Number of params: %d" % num_params)
