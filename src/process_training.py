@@ -8,6 +8,8 @@ import time
 import numpy as np
 from tensorboardX import SummaryWriter
 import torch
+import torch.nn as nn
+
 from data_util.data_batcher import get_batch_generator
 from data_util.evaluate import exact_match_score, f1_score
 from data_util.official_eval_helper import get_json_data, generate_answers
