@@ -6,7 +6,7 @@ import sys
 import time
 
 import numpy as np
-from tensorboardX import SummaryWriter
+import tensorflow as tf
 import torch
 from data_util.data_batcher import get_batch_generator
 from data_util.evaluate import exact_match_score, f1_score
@@ -171,7 +171,7 @@ class Processor(object):
         if not os.path.exists(bestmodel_dir):
             os.makedirs(bestmodel_dir)
 
-        summary_writer = SummaryWriter(train_dir)
+        summary_writer = tf.summary.FileWriter(train_dir)
 
         with open(os.path.join(train_dir, "flags.json"), 'w') as fout:
             json.dump(vars(config), fout)
@@ -200,7 +200,7 @@ class Processor(object):
                 iter_tic = time.time()
 
                 loss, param_norm, grad_norm = self.train_one_batch(batch, model, optimizer, params)
-                summary_writer.add_scalar("train/loss", loss, global_step)
+                write_summary(loss, "train/loss", summary_writer, global_step)
 
                 iter_toc = time.time()
                 iter_time = iter_toc - iter_tic
@@ -223,19 +223,19 @@ class Processor(object):
                 if global_step % config.eval_every == 0:
                     dev_loss = self.get_dev_loss(model)
                     logging.info("Epoch %d, Iter %d, dev loss: %f" % (epoch, global_step, dev_loss))
-                    summary_writer.add_scalar("dev/loss", dev_loss, global_step)
+                    write_summary(dev_loss, "dev/loss", summary_writer, global_step)
 
                     train_f1, train_em = self.check_f1_em(model, "train", num_samples=1000)
                     logging.info("Epoch %d, Iter %d, Train F1 score: %f, Train EM score: %f" % (
                         epoch, global_step, train_f1, train_em))
-                    summary_writer.add_scalar("train/F1", train_f1, global_step)
-                    summary_writer.add_scalar("train/EM", train_em, global_step)
+                    write_summary(train_f1, "train/F1", summary_writer, global_step)
+                    write_summary(train_em, "train/EM", summary_writer, global_step)
 
                     dev_f1, dev_em = self.check_f1_em(model, "dev", num_samples=0)
                     logging.info(
                         "Epoch %d, Iter %d, Dev F1 score: %f, Dev EM score: %f" % (epoch, global_step, dev_f1, dev_em))
-                    summary_writer.add_scalar("dev/F1", dev_f1, global_step)
-                    summary_writer.add_scalar("dev/EM", dev_em, global_step)
+                    write_summary(dev_f1, "dev/F1", summary_writer, global_step)
+                    write_summary(dev_em, "dev/EM", summary_writer, global_step)
 
                     if best_dev_f1 is None or dev_f1 > best_dev_f1:
                         best_dev_f1 = dev_f1
@@ -331,6 +331,12 @@ class Processor(object):
         dev_loss = sum(loss_per_batch) / float(total_num_examples)
 
         return dev_loss
+
+
+def write_summary(value, tag, summary_writer, global_step):
+    summary = tf.Summary()
+    summary.value.add(tag=tag, simple_value=value)
+    summary_writer.add_summary(summary, global_step)
 
 
 if __name__ == "__main__":
