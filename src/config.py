@@ -8,10 +8,10 @@ config.data_dir = os.path.join(os.path.expanduser('~'), 'git/advml2019/project/c
 config.log_root = os.path.join(os.path.expanduser('~'), 'git/advml2019/project/coattention-network-QA/log')
 config.embedding_path = os.path.join(config.data_dir, 'glove.trimmed.100.npz')
 
-config.context_len = 600 # same as paper
+config.context_len = 600
 config.question_len = 30
 
-config.hidden_dim = 200 # same as paper
+config.hidden_dim = 200
 config.embedding_size=100
 
 #vector with zeros for unknown words

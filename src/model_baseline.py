@@ -7,8 +7,7 @@ from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 
 use_cuda = torch.cuda.is_available()
 
-# AJ: Need this function? Could get everything in one below or call this one hidden size
-# out-of-vocabulary words to zero
+
 def get_pretrained_embedding(np_embd):
     embedding = nn.Embedding(*np_embd.shape)
     embedding.weight = nn.Parameter(torch.from_numpy(np_embd).float())
