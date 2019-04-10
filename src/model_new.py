@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 
 '''
@@ -9,51 +10,53 @@ LSTM Encoder
 '''
 
 class Encoder(nn.Module):
-    def __init__(self): # missing param
+    def __init__(self, hidden_size, emb_matrix dropout_ratio):
         super(Encoder, self).__init__()
 
         # get embeddings
-        self.embedding = nn.Embedding.from_pretrained(emb_matrix, freeze=True, sparse=False) # investigate function, shoudl change freeze?
+        self.embedding = nn.Embedding.from_pretrained(emb_matrix, freeze=True, sparse=False) # Review: Freeze true or false
 
         # dimensions of model
-        self.input_size  = self.embedding.embedding_dim # make sure, possible mistake
+        self.input_size  = self.embedding.embedding_dim # possible mistake
         self.hidden_size = hidden_size
-        self.drop_ratio  = drop_ratio                   # define this, usually hyperparameter when call coattention model
-        self.num_layers  = 1                            # or set variable? num_layers
+        self.drop_ratio  = drop_ratio
+        self.num_layers  = 1
 
         # LSTM encoder
         self.encoder = nn.LSTM(self.input_size, self.hidden_size, self.num_layers,
                                batch_first=True, bidirectional=False,
-                               dropout=dropout_ratio) # leave dropout_ratio ?
+                               dropout=dropout_ratio)
 
-        # No forget bias function
+        # Review: Insert forget bias function?
 
         # Dropout
-        self.dropout = nn.Dropout(p=dropout_ratio) # leave dropout_ratio ? also named var differentlys
+        self.dropout = nn.Dropout(p=dropout_ratio)
 
         # Sentinel vector
         self.sentinel = nn.Parameter(torch.rand(hidden_size,))
 
-        #### Coattention Model ####
-        self.q_proj = nn.Linear(hidden_size, hidden_size) # standard should be hidden_size or self.hidden_size
-        # need Fusion BiLSTM and decoder
+        # Coattention Model
+        self.q_projection = nn.Linear(hidden_size, hidden_size) # standard should be hidden_size or self.hidden_size
+
+        # Review: need Fusion BiLSTM and decoder
 
     def forward(self, input): # missing param
-        # here a bunch of sum, sort, and index_select of input, necessary?
+
+        # Review: Original model had here a bunch of sum, sort, and index_select of input, necessary?
 
         # get pretrained embedding
         embedded = self.embedding(input)
 
-        # here before encoding here packed padded sequence, see function
+        # Review: Original model had encoding here of packed padded sequence, necessary?
 
         # encode embedding with LSTM
         output, _ = self.encoder(embedded)
 
-        # here un pad previously padded, might also need contiguous function
+        # Review: Original model un pad previously padded, might also need contiguous function
 
         output = self.dropout(output)
 
-        # sentinel unsqueeze expand unsqueeze, same for lens
+        # Review: Original model had sentinel unsqueeze expand unsqueeze, same for lens
         # missing part, not understanding its function
 
 
@@ -64,7 +67,7 @@ class Encoder(nn.Module):
         D  = self.encoder(d_input, d_mask)
 
         # Project question embedidngs
-        Q = torch.tanh(self.q_proj(Q_.view(-1, self.hidden_size))).view(Q_.size()) # Why view and then size ? Why this and not linear combination?
+        Q = torch.tanh(self.q_projection(Q_.view(-1, self.hidden_size))).view(Q_.size()) # Why view and then size ? Why this and not linear combination?
 
         # Affinity Matrix
         D_t = torch.transpose(D, 1, 2)
@@ -77,17 +80,24 @@ class Encoder(nn.Module):
 
         # Column-wise attention weights
         A_D = F.softmax(L, dim=2)
-        # missing Q_t, why would need to transpose Q? Never transposed in paper. Maybe for dot product?
-        C_D = torch.bmm(torch.cat((Q, C_Q), 1), A_D) # in other code Q_t instead of Q. Why?
+
+        # REVIEW: Original model transposes Q? Why would we need that? Never transposed in paper.
+
+        C_D = torch.bmm(torch.cat((Q, C_Q), 1), A_D) # REVIEW: in other code Q_t instead of Q. Why?
 
         C_D_t = torch.transpose(C_D, 1, 2)
 
+        # Fusion BiLSTM
+        bilstm = torch.cat((C_D_t, D), 2) # Why first C_D_t and after D, not other way around? See paper
+        bilstm = self.dropout(bilstm)
+        # U = self.fusion_bilstm(bilstm, d_mask) this missing, need fusion_bilstm architecture first
 
-
+        # missing decoder
 
         return output
 
 
-
 class Decoder(nn.Module):
     def __init__(self):
+
+        ### Richard working on Decoder ###
