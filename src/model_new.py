@@ -2,6 +2,10 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
+
+from allennlp.modules.augmented_lstm import AugmentedLstm # might not be necessary
+from allennlp.nn.initializers import lstm_hidden_bias
 
 '''
 LSTM Encoder
@@ -17,17 +21,25 @@ class Encoder(nn.Module):
         self.embedding = nn.Embedding.from_pretrained(emb_matrix, freeze=True, sparse=False) # Review: Freeze true or false
 
         # dimensions of model
-        self.input_size  = self.embedding.embedding_dim # possible mistake
-        self.hidden_size = hidden_size
+        self.input_size  = self.embedding.embedding_dim # possible mistake, also var name change
+        self.hidden_size = hidden_size # var name change
         self.drop_ratio  = drop_ratio
         self.num_layers  = 1
 
-        # LSTM encoder
+        # LSTM encoder (should name it LSTM instead of encoder?)
         self.encoder = nn.LSTM(self.input_size, self.hidden_size, self.num_layers,
                                batch_first=True, bidirectional=False,
-                               dropout=dropout_ratio)
+                               dropout=self.dropout_ratio)
 
-        # Review: Insert forget bias function?
+        # Altenative with Allen NLP
+        '''self.encoder = PytorchSeq2SeqWrapper(nn.LSTM(self.input_size, self.hidden_size, self.num_layers,
+                               batch_first=True, bidirectional=False,
+                               dropout=dropout_ratio))'''
+
+        # Forget bias to 1.0
+        # Initialize forget gate biases to 1.0 as per "An Empirical
+        # Exploration of Recurrent Network Architectures" (Jozefowicz, 2015)
+        lstm_hidden_bias(self.encoder)
 
         # Dropout
         self.dropout = nn.Dropout(p=dropout_ratio)
@@ -40,6 +52,8 @@ class Encoder(nn.Module):
 
         # Review: need Fusion BiLSTM and decoder
 
+        self.fusion_bilstm = nn.LSTM(3 * hidden_size, hidden_size, ) # 3 * because size of inputs (?)
+
     def forward(self, input): # missing param
 
         # Review: Original model had here a bunch of sum, sort, and index_select of input, necessary?
@@ -47,7 +61,8 @@ class Encoder(nn.Module):
         # get pretrained embedding
         embedded = self.embedding(input)
 
-        # Review: Original model had encoding here of packed padded sequence, necessary?
+        # Review: Original model had encoding here of packed padded sequence, necessary? - YES
+        embedded = pack_padded_sequence(embedded, lens_sorted, batch_first=True) # does length of embedding need to be sorted? Problem that replacing var?
 
         # encode embedding with LSTM
         output, _ = self.encoder(embedded)
