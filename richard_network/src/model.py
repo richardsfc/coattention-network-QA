@@ -4,6 +4,7 @@ import torch.nn.functional as F
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 from allennlp.nn.initializers import lstm_hidden_bias
 
+
 class SimpleEncoder(nn.Module):
     """ Document and Question Encoder """
 
@@ -123,6 +124,9 @@ class DynamicDecoder(nn.Module):
         # Exploration of Recurrent Network Architectures" (Jozefowicz, 2015)
         lstm_hidden_bias(self.decoder)
 
+        self.hmn_s = HighwayMaxoutModel(hidden_dim, pool_size)
+        self.hmn_e = HighwayMaxoutModel(hidden_dim, pool_size)
+
     def forward(self, seq_encoding, mask):
         # seq_encoding -> b*m*2l, mask -> b*m
         b, m, _ = list(seq_encoding.size())
@@ -142,16 +146,29 @@ class DynamicDecoder(nn.Module):
             u_s = seq_encoding[indices, s, :]  # b*2l
             u_e = seq_encoding[indices, e, :]  # b*2l
 
-            output, lstm_states = self.decoder(torch.cat((u_s, u_e), 1), lstm_states)
+            _, lstm_states = self.decoder(torch.cat((u_s, u_e), 1), lstm_states)
             hidden_state, _ = lstm_states
+            hidden_state.view(-1, self.hidden_dim)  # b*l
 
-            # TODO MaxOutHighway
+            s_new = self.hmn_s(seq_encoding, mask, hidden_state, u_s, u_e)
+            e_new = self.hmn_e(seq_encoding, mask, hidden_state, u_s, u_e)
+
+            if torch.sum(s_new != s).item() == 0 and torch.sum(e_new != e).item() == 0:
+                s = s_new
+                e = e_new
+                break
+
+        return s, e
 
 
 class DCNModel(nn.Module):
     """ Complete Implementation of the DCN Network"""
-    def __init__(self):
+    def __init__(self, embedding, hidden_dim, dropout_ratio, pool_size, max_iter):
         super(DCNModel, self).__init__()
+        self.encoder = CoattentionEncoder(embedding, hidden_dim, dropout_ratio)
+        self.decoder = DynamicDecoder(hidden_dim, pool_size, dropout_ratio, max_iter)
 
-    def forward(self, *input):
-        pass
+    def forward(self, q_seq, q_mask, d_seq, d_mask):
+        U = self.encoder(q_seq, q_mask, d_seq, d_mask)
+        s, e = self.decoder(U, d_mask)
+        return s, e
