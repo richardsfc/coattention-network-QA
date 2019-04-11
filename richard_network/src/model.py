@@ -163,6 +163,7 @@ class DynamicDecoder(nn.Module):
 
 class DCNModel(nn.Module):
     """ Complete Implementation of the DCN Network"""
+    
     def __init__(self, embedding, hidden_dim, dropout_ratio, pool_size, max_iter):
         super(DCNModel, self).__init__()
         self.encoder = CoattentionEncoder(embedding, hidden_dim, dropout_ratio)
