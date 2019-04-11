@@ -92,12 +92,21 @@ class DynamicDecoder(nn.Module):
         # initialize s to be the first word, e to be the last word
         s = torch.zeros(b).long()
         e = torch.sum(mask, 1) - 1
+        indices = torch.arange(0, b).long()
 
         if torch.cuda.is_available():
-            s.cuda()
-            e.cuda()
+            s = s.cuda()
+            e = e.cuda()
+            indices = indices.cuda()
 
+        lstm_states = None
         for _ in range(self.max_iter):
-            u_s = seq_encoding[:, s, :]
-            u_e = seq_encoding[:, s, :]
+            u_s = seq_encoding[indices, s, :]  # b*2l
+            u_e = seq_encoding[indices, e, :]  # b*2l
+
+            output, lstm_states = self.decoder(torch.cat((u_s, u_e), 1), lstm_states)
+            hidden_state, _ = lstm_states
+
+            # TODO MaxOutHighway
+
 
