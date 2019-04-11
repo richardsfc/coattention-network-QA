@@ -54,9 +54,14 @@ class Encoder(nn.Module):
 
         self.fusion_bilstm = nn.LSTM(3 * hidden_size, hidden_size, ) # 3 * because size of inputs (?)
 
-    def forward(self, input): # missing param
+    def forward(self, input, mask): # rename param seq = input, mask = mask
 
         # Review: Original model had here a bunch of sum, sort, and index_select of input, necessary?
+        # Answer: Yes, because when sorted less padding necessary so on average faster. See (Sutskever et al., 2014) & (Bahdanau et al., 2015)
+        batch_lengths = torch.sum(mask, 1)
+        batch_sorted, batch_indices = torch.sort(batch_lengths, 0, True)
+        batch_indices_sorted = torch.sort(batch_indices, 0)
+        input = torch.index_select(input, 0, batch_indices) # problematic that replacing input with new input? or should name differently?
 
         # get pretrained embedding
         embedded = self.embedding(input)
@@ -68,11 +73,16 @@ class Encoder(nn.Module):
         output, _ = self.encoder(embedded)
 
         # Review: Original model un pad previously padded, might also need contiguous function
+        output, _ = pad_packed_sequence(output, batch_first=True)
 
+        output = output.contiguous()
+        output = torch.index_select(output, 0, batch_indices_sorted)
         output = self.dropout(output)
 
+        # Sentinel
         # Review: Original model had sentinel unsqueeze expand unsqueeze, same for lens
         # missing part, not understanding its function
+        
 
 
         #### Coattention Model ####
