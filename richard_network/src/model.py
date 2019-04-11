@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
-
+from allennlp.nn.initializers import lstm_hidden_bias
 
 class SimpleEncoder(nn.Module):
     """ Document and Question Encoder """
@@ -13,17 +13,20 @@ class SimpleEncoder(nn.Module):
         self.hidden_dim = hidden_dim  # dimension of the LSTM hidden state
         self.encoder = nn.LSTM(self.embedding.embedding_dim, hidden_dim, num_layers=1, batch_first=True,
                                bidirectional=False, dropout=dropout_ratio)
+        # Initialize forget gate biases to 1.0 as per "An Empirical
+        # Exploration of Recurrent Network Architectures" (Jozefowicz, 2015)
+        lstm_hidden_bias(self.encoder)
         self.dropout = nn.Dropout(p=dropout_ratio)  # dropout layer for the final output
         self.sentinel = nn.Parameter(torch.rand(hidden_dim))
 
     def forward(self, seq, mask):
-        # shape of seq and mask: batch_size * doc_len/question_len (b * m)
+        # seq, mask -> batch_size * doc_len or question_len (b*m or n)
         seq_lens = torch.sum(mask, 1)
         seq_lens_sorted, seq_lens_argsort = torch.sort(seq_lens, descending=True)
         _, seq_lens_argsort_reverse = torch.sort(seq_lens_argsort)
 
         seq_descending = torch.index_select(seq, 0, seq_lens_argsort)  # seq is rearranged by descending length
-        seq_embedding = self.embedding(seq_descending)  # b * m * embedding_size (b * m * l)
+        seq_embedding = self.embedding(seq_descending)  # b * m * embedding_size (b*m*l)
         seq_packed = pack_padded_sequence(seq_embedding, seq_lens_sorted, True)
         output, _ = self.encoder(seq_packed)
         output, _ = pad_packed_sequence(output, batch_first=True)
@@ -46,6 +49,9 @@ class CoattentionEncoder(nn.Module):
         self.q_linear = nn.Linear(hidden_dim, hidden_dim)
         self.encoder_fusion = nn.LSTM(3*hidden_dim, 2*hidden_dim, num_layers=1, batch_first=True,
                                       bidirectional=True, dropout=dropout_ratio)
+        # Initialize forget gate biases to 1.0 as per "An Empirical
+        # Exploration of Recurrent Network Architectures" (Jozefowicz, 2015)
+        lstm_hidden_bias(self.encoder_fusion)
         self.dropout = nn.Dropout(p=dropout_ratio)  # dropout layer for the final output
 
     def forward(self, q_seq, q_mask, d_seq, d_mask):
@@ -77,6 +83,34 @@ class CoattentionEncoder(nn.Module):
         return output
 
 
+class HighwayMaxoutModel(nn.Module):
+    """ Highway Maxout Network to calculate start and end scores"""
+
+    def __init__(self, hidden_dim, pool_size):
+        super(HighwayMaxoutModel, self).__init__()
+        self.hidden_dim = hidden_dim
+        self.pool_size = pool_size
+        self.f_r = nn.Linear(5*hidden_dim, hidden_dim, bias=False)
+        self.f_m_1 = nn.Linear(3*hidden_dim, pool_size*hidden_dim)
+        self.f_m_2 = nn.Linear(hidden_dim, pool_size*hidden_dim)
+        self.f_final = nn.Linear(2*hidden_dim, pool_size)
+
+    def forward(self, seq_encoding, mask, hidden_state, u_s, u_e):
+        # seq_encoding -> b*m*2l, mask -> b*m, hidden_state -> b*l, u_s,u_e -> b*2l
+        b, m, _ = list(seq_encoding.size())
+        r = F.tanh(self.f_r(torch.cat((hidden_state, u_s, u_e), 1)))  # b*l
+        m_1 = self.f_m_1(torch.cat((seq_encoding, r.expand(b, m, -1).contiguous()), 2).view(-1, 3*self.hidden_dim)).\
+            view(b, m, self.pool_size, self.hidden_dim)  # b*m*p*l
+        m_1, _ = torch.max(m_1, 2)  # b*m*l
+        m_2 = self.f_m_2(m_1.view(-1, self.hidden_dim)).view(b, m, self.pool_size, self.hidden_dim)  # b*m*p*l
+        m_2, _ = torch.max(m_2, 2)  # b*m*l
+        output = self.f_final(torch.cat((m_1, m_2), 2).view(-1, 2*self.hidden_dim)).view(b, m, self.pool_size)  # b*m*p
+        output, _ = torch.max(output, 2)  # b*m
+        _, output = torch.max(output, 1)  # b
+
+        return output  # the indices of the largest scores
+
+
 class DynamicDecoder(nn.Module):
     """ Dynamic Pointer Decoder"""
 
@@ -85,15 +119,19 @@ class DynamicDecoder(nn.Module):
         self.max_iter = max_iter
         self.decoder = nn.LSTM(4*hidden_dim, hidden_dim, num_layers=1, batch_first=True,
                                bidirectional=False, dropout=dropout_ratio)
+        # Initialize forget gate biases to 1.0 as per "An Empirical
+        # Exploration of Recurrent Network Architectures" (Jozefowicz, 2015)
+        lstm_hidden_bias(self.decoder)
 
     def forward(self, seq_encoding, mask):
-        # seq_encoding -> b*m*2l
+        # seq_encoding -> b*m*2l, mask -> b*m
         b, m, _ = list(seq_encoding.size())
         # initialize s to be the first word, e to be the last word
         s = torch.zeros(b).long()
         e = torch.sum(mask, 1) - 1
         indices = torch.arange(0, b).long()
 
+        # s, e, indices are created in the method, need to move to CUDA if possible
         if torch.cuda.is_available():
             s = s.cuda()
             e = e.cuda()
@@ -110,3 +148,10 @@ class DynamicDecoder(nn.Module):
             # TODO MaxOutHighway
 
 
+class DCNModel(nn.Module):
+    """ Complete Implementation of the DCN Network"""
+    def __init__(self):
+        super(DCNModel, self).__init__()
+
+    def forward(self, *input):
+        pass
