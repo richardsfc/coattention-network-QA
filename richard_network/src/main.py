@@ -26,7 +26,7 @@ print('Using CUDA.' if use_cuda else 'Using CPU.')
 
 class Processor(object):
     def __init__(self):
-        self.glove_path = os.path.join(config.data_dir, "glove.840B.{}d.txt".format(config.embedding_size))
+        self.glove_path = os.path.join(config.data_dir, "glove.6B.{}d.txt".format(config.embedding_size))
         self.emb_matrix, self.word2id, self.id2word = get_glove(self.glove_path, config.embedding_size)
 
         self.train_context_path = os.path.join(config.data_dir, "train.context")

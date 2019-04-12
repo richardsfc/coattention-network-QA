@@ -33,11 +33,11 @@ def get_glove(glove_path, glove_dim):
     mappings from words to word ids.
 
     Input:
-      glove_path: path to glove.840B.{glove_dim}d.txt
+      glove_path: path to glove.6B.{glove_dim}d.txt
       glove_dim: integer; needs to match the dimension in glove_path
 
     Returns:
-      emb_matrix: Numpy array shape (22000002, glove_dim) containing glove embeddings
+      emb_matrix: Numpy array shape (400002, glove_dim) containing glove embeddings
         (plus PAD and UNK embeddings in first two rows).
         The rows of emb_matrix correspond to the word ids given in word2id and id2word
       word2id: dictionary mapping word (string) to word id (int)
@@ -45,7 +45,7 @@ def get_glove(glove_path, glove_dim):
     """
 
     print("Loading GLoVE vectors from file: %s" % glove_path)
-    vocab_size = int(2.2e6)  # this is the vocab size of the corpus we've downloaded
+    vocab_size = int(4e5)  # this is the vocab size of the corpus we've downloaded
 
     emb_matrix = np.zeros((vocab_size + len(_START_VOCAB), glove_dim))
     word2id = {}
