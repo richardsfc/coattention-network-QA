@@ -1,27 +1,34 @@
 import os
 
-data_dir = os.path.join(os.path.expanduser('~'), 'co-attention/data')
-log_root = os.path.join(os.path.expanduser('~'), 'co-attention/log')
 
-context_len = 600
-question_len = 30
+class Config(object):
+    pass
 
-hidden_dim = 200
-embedding_size = 300
 
-max_dec_steps = 4
-maxout_pool_size = 16
+config = Config()
+config.data_dir = os.path.join(os.path.expanduser('~'), 'co-attention/data')
+config.log_root = os.path.join(os.path.expanduser('~'), 'co-attention/log')
 
-lr = 3e-4
-dropout_ratio = 0.15
+config.context_len = 600
+config.question_len = 30
 
-max_grad_norm = 5.0
-batch_size = 200
-num_epochs = 50
+config.hidden_dim = 200
+config.embedding_size = 300
 
-print_every = 10
-save_every = 50000
-eval_every = 1000
+# vector with zeros for unknown words
+config.max_dec_steps = 4
+config.maxout_pool_size = 16
 
-model_type = 'co-attention'
-reg_lambda = 0.00007
+config.lr = 3e-4
+config.dropout_ratio = 0.15
+
+config.max_grad_norm = 5.0
+config.batch_size = 200
+config.num_epochs = 50
+
+config.print_every = 10
+config.save_every = 50000
+config.eval_every = 1000
+
+config.model_type = 'co-attention'
+config.reg_lambda = 0.00007
