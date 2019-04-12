@@ -21,7 +21,7 @@ def init_lstm_forget_bias(lstm):
                 # set forget bias to 1
                 bias = getattr(lstm, name)
                 n = bias.size(0)
-                start, end = n // 4, n // 2
+                start, end = n // 4, n // 2 # integer division
                 bias.data.fill_(0.)
                 bias.data[start:end].fill_(1.)
 
@@ -33,16 +33,12 @@ class Encoder(nn.Module):
         self.embedding = get_pretrained_embedding(emb_matrix)
         self.emb_dim = self.embedding.embedding_dim
 
-        # AJ: Add option to switch modes (LSTM vs. GRU vs. Vanilla-RNN)
         self.encoder = nn.LSTM(self.emb_dim, hidden_dim, 1, batch_first=True,
                               bidirectional=False, dropout=dropout_ratio)
-
-        # Review: What is this for?
         init_lstm_forget_bias(self.encoder)
         self.dropout_emb = nn.Dropout(p=dropout_ratio)
         self.sentinel = nn.Parameter(torch.rand(hidden_dim,))
 
-    # Review: What does this do?
     def forward(self, seq, mask):
         lens = torch.sum(mask, 1)
         lens_sorted, lens_argsort = torch.sort(lens, 0, True)
@@ -57,8 +53,6 @@ class Encoder(nn.Module):
         e = torch.index_select(e, 0, lens_argsort_argsort)  # B x m x 2l
         e = self.dropout_emb(e)
 
-        # Review
-        # this part forward is NOT in baseline, what does part below do?
         b, _ = list(mask.size())
         # copy sentinel vector at the end
         sentinel_exp = self.sentinel.unsqueeze(0).expand(b, self.hidden_dim).unsqueeze(1).contiguous()  # B x 1 x l
