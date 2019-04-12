@@ -82,7 +82,7 @@ class Encoder(nn.Module):
         # Sentinel
         # Review: Original model had sentinel unsqueeze expand unsqueeze, same for lens
         # missing part, not understanding its function
-        
+
 
 
         #### Coattention Model ####
@@ -118,6 +118,8 @@ class Encoder(nn.Module):
         # U = self.fusion_bilstm(bilstm, d_mask) this missing, need fusion_bilstm architecture first
 
         # missing decoder
+
+        # Review: Sentinel squeeze unsqueeze
 
         return output
 
