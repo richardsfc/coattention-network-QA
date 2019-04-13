@@ -106,7 +106,7 @@ class DoubleCrossAttentionEncoder(nn.Module):
         https://arxiv.org/pdf/1803.09230.pdf """
 
     def __init__(self, embedding, hidden_dim, dropout_ratio):
-        super(CoattentionEncoder, self).__init__()
+        super(DoubleCrossAttentionEncoder, self).__init__()
         self.hidden_dim = hidden_dim
         self.encoder_dq = SimpleEncoder(embedding, hidden_dim, dropout_ratio)
         self.q_linear = nn.Linear(2*hidden_dim, 2*hidden_dim)
