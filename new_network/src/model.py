@@ -120,9 +120,9 @@ class HighwayMaxoutModel(nn.Module):
         self.f_m_1 = nn.Linear(3*hidden_dim, pool_size*hidden_dim)
         self.f_m_2 = nn.Linear(hidden_dim, pool_size*hidden_dim)
         self.f_final = nn.Linear(2*hidden_dim, pool_size)
-        self.loss = nn.CrossEntropyLoss(reduce=False)
+        self.loss = nn.CrossEntropyLoss(reduction='none')
 
-    def forward(self, seq_encoding, mask, hidden_state, u_s, u_e, target=None):
+    def forward(self, seq_encoding, mask, loss_mask, old_idx, hidden_state, u_s, u_e, target=None):
         # seq_encoding -> b*m*2l, mask -> b*m, hidden_state -> b*l, u_s,u_e -> b*2l, target -> b
         b, m, _ = list(seq_encoding.size())
         r = torch.tanh(self.f_r(torch.cat((hidden_state, u_s, u_e), 1).float()))  # b*l
@@ -136,13 +136,22 @@ class HighwayMaxoutModel(nn.Module):
         output = output + mask  # b*m
         _, idx_output = torch.max(output, 1)  # b
 
+        # Eliminate unnecessary loss values
+        if loss_mask is None:
+            loss_mask = (idx_output == idx_output)
+        else:
+            old_idx_ = old_idx * loss_mask.long()
+            idx_output_ = idx_output * loss_mask.long()
+            loss_mask = (old_idx_ != idx_output_)
+
         loss = None
         # Calculate the loss
         if target is not None:
             scores = F.log_softmax(output, 1)
             loss = self.loss(scores, target)  # b
+            loss = loss * loss_mask.float()
 
-        return idx_output, loss  # the indices of the largest scores and the loss
+        return idx_output, loss_mask, loss  # the indices of the largest scores and the loss
 
 
 class DynamicDecoder(nn.Module):
@@ -190,8 +199,12 @@ class DynamicDecoder(nn.Module):
             hidden_state, _ = lstm_states
             hidden_state = hidden_state.view(-1, self.hidden_dim)  # b*l
 
-            s_new, loss_s = self.hmn_s(seq_encoding, mask_hmn, hidden_state, u_s, u_e, target_s)
-            e_new, loss_e = self.hmn_e(seq_encoding, mask_hmn, hidden_state, u_s, u_e, target_e)
+            loss_mask_s, loss_mask_e = None, None
+
+            s_new, loss_mask_s, loss_s = self.hmn_s(seq_encoding, mask_hmn, loss_mask_s, s,
+                                                    hidden_state, u_s, u_e, target_s)
+            e_new, loss_mask_e, loss_e = self.hmn_e(seq_encoding, mask_hmn, loss_mask_s, e,
+                                                    hidden_state, u_s, u_e, target_e)
             if ans_span is not None:
                 losses.append(loss_s + loss_e)
 
@@ -199,6 +212,9 @@ class DynamicDecoder(nn.Module):
                 s = s_new
                 e = e_new
                 break
+
+            s = s_new
+            e = e_new
 
         cumulative_loss = None
 
