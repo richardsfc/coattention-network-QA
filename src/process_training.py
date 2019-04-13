@@ -1,4 +1,3 @@
-import io
 import json
 import logging
 import os
@@ -23,7 +22,7 @@ from model_baseline import Baseline
 logging.basicConfig(level=logging.INFO)
 
 use_cuda = torch.cuda.is_available()
-print ('Using CUDA.' if use_cuda else 'Using CPU.')
+print('Using CUDA.' if use_cuda else 'Using CPU.')
 
 class Processor(object):
     def __init__(self):
