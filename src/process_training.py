@@ -7,6 +7,8 @@ import time
 import numpy as np
 from tensorboardX import SummaryWriter
 import torch
+import torch.nn as nn
+
 from data_util.data_batcher import get_batch_generator
 from data_util.evaluate import exact_match_score, f1_score
 from data_util.official_eval_helper import get_json_data, generate_answers
@@ -23,6 +25,20 @@ logging.basicConfig(level=logging.INFO)
 
 use_cuda = torch.cuda.is_available()
 print('Using CUDA.' if use_cuda else 'Using CPU.')
+
+def adaptive_load_state_dict(model, state_dict):
+    own_state = model.state_dict()
+    for name, param in state_dict.items():
+        if name not in own_state:
+            print('Skipped {}, not found'.format(name))
+            continue
+        if isinstance(param, nn.Parameter):
+            # backwards compatibility for serialized parameters
+            param = param.data
+        if own_state[name].shape != param.shape:
+            print('Skipped {}, shape mismatch'.format(name))
+            continue
+        own_state[name].copy_(param)
 
 class Processor(object):
     def __init__(self):
@@ -97,9 +113,10 @@ class Processor(object):
 
         if model_file_path is not None:
             state = torch.load(model_file_path, map_location=lambda storage, location: storage)
-            model.load_state_dict(state['model'], strict=False)
+            adaptive_load_state_dict(model, state['model'])
 
         return model
+
     def get_grad_norm(self, parameters, norm_type=2):
         parameters = list(filter(lambda p: p.grad is not None, parameters))
         total_norm = 0
