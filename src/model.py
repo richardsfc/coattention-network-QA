@@ -69,7 +69,7 @@ class Encoder(nn.Module):
 class FusionBiLSTM(nn.Module):
     def __init__(self, hidden_dim, dropout_ratio):
         super(FusionBiLSTM, self).__init__()
-        self.fusion_bilstm = nn.LSTM(3 * hidden_dim, 2 * hidden_dim, 1, batch_first=True,
+        self.fusion_bilstm = nn.LSTM(3 * hidden_dim, hidden_dim, 1, batch_first=True,
                                      bidirectional=True, dropout=dropout_ratio)  # Output should be 2*l???
         init_lstm_forget_bias(self.fusion_bilstm)
         self.dropout = nn.Dropout(p=dropout_ratio)
