@@ -1,9 +1,9 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
-from allennlp.nn.initializers import lstm_hidden_bias
 
+from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
+from util import initial_forget_bias
 
 class SimpleEncoder(nn.Module):
     """ Document and Question Encoder """
@@ -16,7 +16,7 @@ class SimpleEncoder(nn.Module):
                                bidirectional=False, dropout=dropout_ratio)
         # Initialize forget gate biases to 1.0 as per "An Empirical
         # Exploration of Recurrent Network Architectures" (Jozefowicz, 2015)
-        # lstm_hidden_bias(self.encoder)
+        initial_forget_bias(self.encoder)
         self.dropout = nn.Dropout(p=dropout_ratio)  # dropout layer for the final output
         # self.sentinel = nn.Parameter(torch.rand(hidden_dim))
 
@@ -54,7 +54,7 @@ class CoattentionEncoder(nn.Module):
                                       bidirectional=True, dropout=dropout_ratio)
         # Initialize forget gate biases to 1.0 as per "An Empirical
         # Exploration of Recurrent Network Architectures" (Jozefowicz, 2015)
-        # lstm_hidden_bias(self.encoder_fusion)
+        initial_forget_bias(self.encoder_fusion)
         self.dropout = nn.Dropout(p=dropout_ratio)  # dropout layer for the final output
 
     def forward(self, q_seq, q_mask, d_seq, d_mask):
@@ -133,7 +133,7 @@ class DynamicDecoder(nn.Module):
                                bidirectional=False, dropout=dropout_ratio)
         # Initialize forget gate biases to 1.0 as per "An Empirical
         # Exploration of Recurrent Network Architectures" (Jozefowicz, 2015)
-        # lstm_hidden_bias(self.decoder)
+        initial_forget_bias(self.decoder)
 
         self.hmn_s = HighwayMaxoutModel(hidden_dim, pool_size)
         self.hmn_e = HighwayMaxoutModel(hidden_dim, pool_size)
