@@ -99,6 +99,7 @@ class CoattentionEncoder(nn.Module):
         output = self.dropout_output(output)
         return output
 
+
 class DoubleCrossAttentionEncoder(nn.Module):
     """ Double Cross Attention Encoder
         Refer to "Pay More Attention: Neural Architectures for Question-Answering" (Hasan, 2018)
@@ -273,6 +274,23 @@ class DCNModel(nn.Module):
 
     def __init__(self, embedding, hidden_dim, dropout_ratio, pool_size, max_iter):
         super(DCNModel, self).__init__()
+        self.encoder = CoattentionEncoder(embedding, hidden_dim, dropout_ratio)
+        self.decoder = DynamicDecoder(hidden_dim, pool_size, dropout_ratio, max_iter)
+
+    def forward(self, q_seq, q_mask, d_seq, d_mask, ans_span=None):
+        U = self.encoder(q_seq, q_mask, d_seq, d_mask)
+        s, e, loss = self.decoder(U, d_mask, ans_span)
+        if ans_span is not None:
+            return loss, s, e
+        else:
+            return s, e
+
+
+class DCAModel(nn.Module):
+    """ Complete Implementation of the DCN Network with double cross attention layer"""
+
+    def __init__(self, embedding, hidden_dim, dropout_ratio, pool_size, max_iter):
+        super(DCAModel, self).__init__()
         self.encoder = DoubleCrossAttentionEncoder(embedding, hidden_dim, dropout_ratio)
         self.decoder = DynamicDecoder(hidden_dim, pool_size, dropout_ratio, max_iter)
 

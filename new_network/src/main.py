@@ -16,7 +16,7 @@ from official_eval_helper import get_json_data, generate_answers
 from pretty_print import print_example
 from vocab import get_glove
 from config import config
-from model import DCNModel
+from model import DCNModel, DCAModel
 from model_baseline import Baseline
 
 logging.basicConfig(level=logging.INFO)
@@ -86,6 +86,9 @@ class Processor(object):
     def get_model(self, model_file_path=None, is_eval=False):
         if config.model_type == 'co-attention':
             model = DCNModel(self.emb_matrix, config.hidden_dim, config.dropout_ratio, config.maxout_pool_size,
+                             config.max_dec_steps)
+        elif config.model_type == 'co-attention-dca':
+            model = DCAModel(self.emb_matrix, config.hidden_dim, config.dropout_ratio, config.maxout_pool_size,
                              config.max_dec_steps)
         else:
             model = Baseline(config.hidden_dim, self.emb_matrix, config.dropout_ratio)

@@ -30,5 +30,5 @@ config.print_every = 10
 config.save_every = 50000
 config.eval_every = 1000
 
-config.model_type = 'co-attention'
+config.model_type = 'co-attention-dca'
 config.reg_lambda = 0.00007
