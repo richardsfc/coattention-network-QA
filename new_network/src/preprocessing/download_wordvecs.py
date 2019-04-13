@@ -29,7 +29,7 @@ def setup_args():
 def main():
     args = setup_args()
     glove_base_url = "http://nlp.stanford.edu/data/"
-    glove_filename = "glove.6B.zip"
+    glove_filename = "glove.840B.300d.zip " # glove.6B.zip
 
     print("\nDownloading wordvecs to {}".format(args.download_dir))
 
