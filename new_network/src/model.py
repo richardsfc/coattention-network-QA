@@ -83,11 +83,53 @@ class CoattentionEncoder(nn.Module):
         A_q = F.softmax(L, dim=1)  # b*n*m
         A_d = F.softmax(L, dim=2)  # b*n*m
         C_q = torch.bmm(A_q, d_encoding.float())  # b*n*l
+        C_d = torch.bmm(torch.transpose(A_d, 1, 2), torch.cat((q_encoding, C_q), 2))  # b*m*2l
+
+        input_bilstm = torch.cat((d_encoding.double(), C_d.double()), 2)  # b*m*3l
+        input_bilstm = self.dropout_input(input_bilstm)
+        input_lens = torch.sum(d_mask, 1)
+        input_lens_sorted, input_lens_argsort = torch.sort(input_lens, descending=True)
+        _, input_lens_argsort_reverse = torch.sort(input_lens_argsort)
+        input_descending = torch.index_select(input_bilstm, 0, input_lens_argsort)
+        input_packed = pack_padded_sequence(input_descending.float(), input_lens_sorted, True)
+        output, _ = self.encoder_fusion(input_packed)
+        output, _ = pad_packed_sequence(output, batch_first=True)
+        output = output.contiguous()
+        output = torch.index_select(output, 0, input_lens_argsort_reverse)
+        output = self.dropout_output(output)
+        return output
+
+class DoubleCrossAttentionEncoder(nn.Module):
+    """ Double Cross Attention Encoder
+        Refer to "Pay More Attention: Neural Architectures for Question-Answering" (Hasan, 2018)
+        https://arxiv.org/pdf/1803.09230.pdf """
+
+    def __init__(self, embedding, hidden_dim, dropout_ratio):
+        super(CoattentionEncoder, self).__init__()
+        self.hidden_dim = hidden_dim
+        self.encoder_dq = SimpleEncoder(embedding, hidden_dim, dropout_ratio)
+        self.q_linear = nn.Linear(2*hidden_dim, 2*hidden_dim)
+        self.encoder_fusion = nn.LSTM(6*hidden_dim, hidden_dim, num_layers=1, batch_first=True,
+                                      bidirectional=True, dropout=dropout_ratio)
+        init_bias(self.encoder_fusion)
+        self.dropout_input = nn.Dropout(p=dropout_ratio)  # dropout layer for the LSTM input
+        self.dropout_output = nn.Dropout(p=dropout_ratio)  # dropout layer for the final output
+
+    def forward(self, q_seq, q_mask, d_seq, d_mask):
+        q_encoding_intermediate = self.encoder_dq(q_seq, q_mask)
+        d_encoding = self.encoder_dq(d_seq, d_mask)  # b*m*l
+
+        # q_encoding projection
+        q_encoding = torch.tanh(self.q_linear(q_encoding_intermediate.view(-1, 2*self.hidden_dim).float())).\
+            view(q_encoding_intermediate.size())  # b*n*l
+
+        L = torch.bmm(q_encoding, torch.transpose(d_encoding, 1, 2).float())  # b*n*m
+        A_q = F.softmax(L, dim=1)  # b*n*m
+        A_d = F.softmax(L, dim=2)  # b*n*m
+        C_q = torch.bmm(A_q, d_encoding.float())  # b*n*l
         # C_d = torch.bmm(torch.transpose(A_d, 1, 2), torch.cat((q_encoding, C_q), 2))  # b*m*2l
 
         # Improvement: Add another layer of attention as Double Cross Attention to the old model
-        # See "Pay More Attention: Neural Architectures for Question-Answering" (Hasan, 2018)
-        # https://arxiv.org/pdf/1803.09230.pdf
         C_d = torch.bmm(torch.transpose(A_d, 1, 2), q_encoding)  # b*m*l
         R = torch.bmm(C_d, torch.transpose(C_q, 1, 2))  # b*m*n
         A_r = F.softmax(R, dim=2)
@@ -231,7 +273,7 @@ class DCNModel(nn.Module):
 
     def __init__(self, embedding, hidden_dim, dropout_ratio, pool_size, max_iter):
         super(DCNModel, self).__init__()
-        self.encoder = CoattentionEncoder(embedding, hidden_dim, dropout_ratio)
+        self.encoder = DoubleCrossAttentionEncoder(embedding, hidden_dim, dropout_ratio)
         self.decoder = DynamicDecoder(hidden_dim, pool_size, dropout_ratio, max_iter)
 
     def forward(self, q_seq, q_mask, d_seq, d_mask, ans_span=None):
