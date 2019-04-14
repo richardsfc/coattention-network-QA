@@ -31,11 +31,9 @@ UNK_ID = 1
 def get_glove(glove_path, glove_dim):
     """Reads from original GloVe .txt file and returns embedding matrix and
     mappings from words to word ids.
-
     Input:
       glove_path: path to glove.6B.{glove_dim}d.txt
       glove_dim: integer; needs to match the dimension in glove_path
-
     Returns:
       emb_matrix: Numpy array shape (400002, glove_dim) containing glove embeddings
         (plus PAD and UNK embeddings in first two rows).
