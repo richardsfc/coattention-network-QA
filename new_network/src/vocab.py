@@ -64,7 +64,7 @@ def get_glove(glove_path, glove_dim):
         idx += 1
 
     # go through glove vecs
-    with open(glove_path, 'r', encoding="utf-8") as fh:
+    with open(glove_path, 'r') as fh:
         for line in tqdm(fh, total=vocab_size):
             if line[0] == line[1] == ' ':
                 line = [' '] + line.strip().split(' ')
