@@ -44,8 +44,8 @@ def get_glove(glove_path, glove_dim):
       id2word: dictionary mapping word id (int) to word (string)
     """
 
-    print ("Loading GLoVE vectors from file: %s" % glove_path)
-    vocab_size = int(4e5) # this is the vocab size of the corpus we've downloaded
+    print("Loading GLoVE vectors from file: %s" % glove_path)
+    vocab_size = int(4e5)  # this is the vocab size of the corpus we've downloaded
 
     emb_matrix = np.zeros((vocab_size + len(_START_VOCAB), glove_dim))
     word2id = {}

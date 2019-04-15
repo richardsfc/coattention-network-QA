@@ -1,4 +1,3 @@
-import io
 import json
 import logging
 import os
@@ -25,7 +24,7 @@ from model_baseline import Baseline
 logging.basicConfig(level=logging.INFO)
 
 use_cuda = torch.cuda.is_available()
-print ('Using CUDA.' if use_cuda else 'Using CPU.')
+print('Using CUDA.' if use_cuda else 'Using CPU.')
 
 def adaptive_load_state_dict(model, state_dict):
     own_state = model.state_dict()

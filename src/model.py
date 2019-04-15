@@ -7,7 +7,7 @@ from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 
 use_cuda = torch.cuda.is_available()
 
-#out-of-vocabulary words to zero
+# out-of-vocabulary words to zero
 def get_pretrained_embedding(np_embd):
     embedding = nn.Embedding(*np_embd.shape)
     embedding.weight = nn.Parameter(torch.from_numpy(np_embd).float())
@@ -50,7 +50,7 @@ class Encoder(nn.Module):
         output, _ = self.encoder(packed)
         e, _ = pad_packed_sequence(output, batch_first=True)
         e = e.contiguous()
-        e = torch.index_select(e, 0, lens_argsort_argsort)  # B x m x 2l
+        e = torch.index_select(e, 0, lens_argsort_argsort)  # B x m x l
         e = self.dropout_emb(e)
 
         b, _ = list(mask.size())
@@ -61,7 +61,7 @@ class Encoder(nn.Module):
         sentinel_zero = torch.zeros(b, 1, self.hidden_dim)
         if use_cuda:
             sentinel_zero = sentinel_zero.cuda()
-        e = torch.cat([e, sentinel_zero], 1)  # B x m + 1 x l
+        e = torch.cat((e, sentinel_zero), 1)  # B x m + 1 x l
         e = e.scatter_(1, lens, sentinel_exp)
 
         return e
@@ -70,7 +70,7 @@ class FusionBiLSTM(nn.Module):
     def __init__(self, hidden_dim, dropout_ratio):
         super(FusionBiLSTM, self).__init__()
         self.fusion_bilstm = nn.LSTM(3 * hidden_dim, hidden_dim, 1, batch_first=True,
-                                     bidirectional=True, dropout=dropout_ratio)
+                                     bidirectional=True, dropout=dropout_ratio)  # Output should be 2*l???
         init_lstm_forget_bias(self.fusion_bilstm)
         self.dropout = nn.Dropout(p=dropout_ratio)
 
@@ -207,7 +207,7 @@ class MaxOutHighway(nn.Module):
         alpha_in = torch.cat((m_t_1, m_t_2), 1)  # b*m x 2l
         alpha = self.m_t_12_mxp(alpha_in)  # b * m x p
         alpha, _ = alpha.max(1)  # b*m
-        alpha = alpha.view(-1, m) # b x m
+        alpha = alpha.view(-1, m)  # b x m
 
         alpha = alpha + mask_mult  # b x m
         alpha = F.log_softmax(alpha, 1)  # b x m
