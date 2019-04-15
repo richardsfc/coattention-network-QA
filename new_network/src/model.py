@@ -127,11 +127,11 @@ class DoubleCrossAttentionEncoder(nn.Module):
         L = torch.bmm(q_encoding, torch.transpose(d_encoding, 1, 2).float())  # b*n*m
         A_q = F.softmax(L, dim=1)  # b*n*m
         A_d = F.softmax(L, dim=2)  # b*n*m
-        C_q = torch.bmm(torch.transpose(A_q, 1, 2), q_encoding.float())  # b*m*l
+        C_q = torch.bmm(A_q, d_encoding.float())  # b*n*l
 
         # Improvement: Add another layer of attention as Double Cross Attention to the old model
-        C_d = torch.bmm(A_d, d_encoding)  # b*n*l
-        R = torch.bmm(C_q, torch.transpose(C_d, 1, 2))  # b*m*n
+        C_d = torch.bmm(torch.transpose(A_d, 1, 2), q_encoding)  # b*m*l
+        R = torch.bmm(C_d, torch.transpose(C_q, 1, 2))  # b*m*n
         A_r = F.softmax(R, dim=2)
         C_r = torch.bmm(A_r, C_d)  # b*m*l
 
