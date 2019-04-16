@@ -133,7 +133,7 @@ class DoubleCrossAttentionEncoder(nn.Module):
         C_d = torch.bmm(torch.transpose(A_d, 1, 2), q_encoding)  # b*m*l
         R = torch.bmm(C_d, torch.transpose(C_q, 1, 2))  # b*m*n
         A_r = F.softmax(R, dim=2)
-        C_r = torch.bmm(A_r, C_d)  # b*m*l
+        C_r = torch.bmm(A_r, C_q)  # b*m*l
 
         input_bilstm = torch.cat((d_encoding.double(), C_d.double(), C_r.double()), 2)  # b*m*3l
         input_bilstm = self.dropout_input(input_bilstm)
